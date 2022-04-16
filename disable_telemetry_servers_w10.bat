@@ -22,11 +22,12 @@ ver
 echo This script has a preconfigured domain/address blocking, and/or you can add your own (this will edit hosts file).
 echo Reminder, This script requires administrator to run.
 
-REM Creating a Newline variable (the two blank lines are required!)
+REM Creating a Newline variable (the two blank lines are required!) here in case I use it
 set NLM=^
 set NL=^^^%NLM%%NLM%^%NLM%%NLM%
 goto main
 :main
+cls
 echo Input options are as follows:
 echo.
 echo 1 - Use preconfiguration
@@ -37,8 +38,6 @@ echo 3 - Quit script
 echo. 
 echo 4 - Read hosts file
 echo.
-echo sv - Removes select spyware services
-echo. 
 set /P INPUT=5 - CLEAN hosts file
 echo.
 If /I "%INPUT%" == "1" goto one
@@ -46,7 +45,6 @@ If /I "%INPUT%" == "2" goto two
 If /I "%INPUT%" == "3" goto three
 If /I "%INPUT%" == "4" goto four
 if /I "%INPUT%" == "5" goto five
-if /I "%INPUT%" == "sv" goto svcrem
 echo Invalid input
 echo.
 goto main
@@ -61,7 +59,7 @@ EXIT /B 0
 ::TODO: Computer\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\CloudStore check
 ::Analyze C:\Windows\DiagTrack\ It reveals some more services and possible reg keys to block within its files
 :one
-
+sc delete DiagTrack && sc delete dmwappushservice
 echo 0.0.0.0 statsfe2.update.microsoft.com.akadns.net>> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 fe2.update.microsoft.com.akadns.net>> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 smdn.net>> %SystemRoot%\System32\drivers\etc\hosts
@@ -135,14 +133,25 @@ echo 0.0.0.0 msnbot-207-46-194-33.search.msn.com>> %SystemRoot%\System32\drivers
 echo 0.0.0.0 settings.data.microsoft.com>> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 telecommand.telemetry.microsoft.com.nsatc.net >> %SystemRoot%\System32\drivers\etc\hosts
 :: Above servers are from https://github.com/StevenBlack/hosts/issues/154#issuecomment-236422378 but are likely outdated by now
+
+::These servers were found by ApateDNS on an offline w10 vm
 echo 0.0.0.0 ctldl.windowsupdate.com >> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 slscr.update.microsoft.com >> %SystemRoot%\System32\drivers\etc\hosts
 
 REM HERE ARE ALL THE SERVERS FROM UBLOCK ORIGINS FILTER ADDED TO HOSTS FILE (~3500 servers, non-microsoft)
 curl https://raw.githubusercontent.com/gunawannet1/adblock/master/Peter%20Lowe%E2%80%99s%20Ad%20and%20tracking%20server%20list >> %SystemRoot%\System32\drivers\etc\hosts
 
-REM More servers found to be ms telemetry (~467)
+REM More servers found to be ms telemetry (~467) posted on my github. I originally found these in a reddit comment ages ago. I just formatted them and gave them the prefix "0.0.0.0 "
 curl https://raw.githubusercontent.com/InquireWithin/resources/main/ms_telemetry_list.txt >> %SystemRoot%\System32\drivers\etc\hosts
+
+REM Here's another great anti-telemetry and anti-spyware script, written by alchemy1 (https://github.com/alchemy1/Win.10-SpyWare-Bloat-Telemetry-Remove/blob/master/RemoveW10Bloat.bat.txt)
+REM Though its nearly half a decade old, It will help with legacy spyware implementations that microsoft hasnt hidden further within the OS since
+curl https://raw.githubusercontent.com/alchemy1/Win.10-SpyWare-Bloat-Telemetry-Remove/master/RemoveW10Bloat.bat.txt > C:\temp\remw10bloat.bat
+echo @ECHO OFF >> C:\temp\remw10bloat.bat
+type C:\temp\remw10bloat_COPY.bat >> C:\temp\remw10bloat.bat
+del C:\temp\remw10bloat_COPY.bat
+ren C:\temp\remw10bloat.bat C:\temp\remw10bloat_COPY.bat	
+call C:\temp\remw10bloat.bat
 :: Not ready to implement yet
 REM Using Windows10Debloater for additional bloat removal (https://github.com/Sycnex/Windows10Debloater)
 REM this script uses the silent version (Windows10Debloater.ps1)
@@ -182,8 +191,3 @@ REM you can do this in powershell with Clear-Content as well
 break>%SystemRoot%\System32\drivers\etc\hosts
 goto main
 exit /b 0
-
-:svcrem
-sc delete DiagTrack && sc delete dmwappushservice
-goto main
-exit /b
