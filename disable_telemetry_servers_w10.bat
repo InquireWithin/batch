@@ -4,6 +4,10 @@
 :: You should also be aware that Microsoft, as the firewall and the OS are propreitary, may have a hidden rule
 :: within the code that will interrupt or override these connection blocks.
 :: It is much preferred you use almost any other type of firewall or packet blocking/filtering solution
+::Some say that microsoft ignores telemetry server blocking via hosts file as well.
+::TL;DR use pi hole for blocking microsoft telemetry just to be safe, but the ublock ad list in the preconfig works fine.
+
+::If this file was flagged a security risk, know that this is why: https://www.bleepingcomputer.com/news/microsoft/windows-10-hosts-file-blocking-telemetry-is-now-flagged-as-a-risk/
 
 ::NOTE: This script ASSUMES your registry key:
 ::HKEY_LOCAL_MACHINES\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\DataBasePath
@@ -12,11 +16,10 @@
 ::the file that will be edited is %SystemRoot%\System32\drivers\etc
 ::by default %SystemRoot% is C:\Windows
 
-
+::choice /y yn /n /m "heres a choice (y/n)"
 @echo off
 ver
 echo This script has a preconfigured domain/address blocking, and/or you can add your own (this will edit hosts file).
-echo 2 services are removed in the preconfig: DiagTrack, and dmwappushservice
 echo Reminder, This script requires administrator to run.
 
 REM Creating a Newline variable (the two blank lines are required!)
@@ -56,7 +59,9 @@ EXIT /B 0
 ::TODO: check if Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\MicrosoftEdge OSIntegrationLevel can be set to 0.
 ::TODO: Computer\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Cortana toggle to 0
 ::TODO: Computer\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\CloudStore check
+::Analyze C:\Windows\DiagTrack\ It reveals some more services and possible reg keys to block within its files
 :one
+
 echo 0.0.0.0 statsfe2.update.microsoft.com.akadns.net>> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 fe2.update.microsoft.com.akadns.net>> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 smdn.net>> %SystemRoot%\System32\drivers\etc\hosts
@@ -130,6 +135,19 @@ echo 0.0.0.0 msnbot-207-46-194-33.search.msn.com>> %SystemRoot%\System32\drivers
 echo 0.0.0.0 settings.data.microsoft.com>> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 telecommand.telemetry.microsoft.com.nsatc.net >> %SystemRoot%\System32\drivers\etc\hosts
 :: Above servers are from https://github.com/StevenBlack/hosts/issues/154#issuecomment-236422378 but are likely outdated by now
+echo 0.0.0.0 ctldl.windowsupdate.com >> %SystemRoot%\System32\drivers\etc\hosts
+echo 0.0.0.0 slscr.update.microsoft.com >> %SystemRoot%\System32\drivers\etc\hosts
+
+REM HERE ARE ALL THE SERVERS FROM UBLOCK ORIGINS FILTER ADDED TO HOSTS FILE (~3500 servers, non-microsoft)
+curl https://raw.githubusercontent.com/gunawannet1/adblock/master/Peter%20Lowe%E2%80%99s%20Ad%20and%20tracking%20server%20list >> %SystemRoot%\System32\drivers\etc\hosts
+
+REM More servers found to be ms telemetry (~467)
+curl https://raw.githubusercontent.com/InquireWithin/resources/main/ms_telemetry_list.txt >> %SystemRoot%\System32\drivers\etc\hosts
+:: Not ready to implement yet
+REM Using Windows10Debloater for additional bloat removal (https://github.com/Sycnex/Windows10Debloater)
+REM this script uses the silent version (Windows10Debloater.ps1)
+REM curl https://raw.githubusercontent.com/Sycnex/Windows10Debloater/master/Windows10Debloater.ps1 > C:\temp\Windows10Debloater.ps1
+REM start powershell -noexit -command "Set-ExecutionPolicy Unrestricted -Force && 
 ipconfig /flushdns
 goto main
 exit /b 0
@@ -160,7 +178,7 @@ exit /b 0
 
 :five
 REM you can do this in powershell with Clear-Content as well
-echo if this fails, ensure that the file isnt being used by another process (notepad, etc)
+;echo if this fails, ensure that the file isnt being used by another process (notepad, etc)
 break>%SystemRoot%\System32\drivers\etc\hosts
 goto main
 exit /b 0
