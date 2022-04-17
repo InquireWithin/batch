@@ -7,6 +7,8 @@
 ::Some say that microsoft ignores telemetry server blocking via hosts file as well.
 ::TL;DR use pi hole for blocking microsoft telemetry just to be safe, but the ublock ad list in the preconfig works fine.
 
+::Will probably add OEM-specific debloating and exception handling soon enough
+
 ::If this file was flagged a security risk, know that this is why: https://www.bleepingcomputer.com/news/microsoft/windows-10-hosts-file-blocking-telemetry-is-now-flagged-as-a-risk/
 
 ::NOTE: This script ASSUMES your registry key:
@@ -59,7 +61,11 @@ EXIT /B 0
 ::TODO: Computer\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\CloudStore check
 ::Analyze C:\Windows\DiagTrack\ It reveals some more services and possible reg keys to block within its files
 :one
+::Flush current hosts file and start
+break>%SystemRoot%\System32\drivers\etc\hosts
+::Two services that have persisted in w10 since inception, deleting them here
 sc delete DiagTrack && sc delete dmwappushservice
+::Servers identified in early w10 builds as telemetry-oriented. I feel that most arent active today, but they stay regardless
 echo 0.0.0.0 statsfe2.update.microsoft.com.akadns.net>> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 fe2.update.microsoft.com.akadns.net>> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 smdn.net>> %SystemRoot%\System32\drivers\etc\hosts
@@ -134,7 +140,7 @@ echo 0.0.0.0 settings.data.microsoft.com>> %SystemRoot%\System32\drivers\etc\hos
 echo 0.0.0.0 telecommand.telemetry.microsoft.com.nsatc.net >> %SystemRoot%\System32\drivers\etc\hosts
 :: Above servers are from https://github.com/StevenBlack/hosts/issues/154#issuecomment-236422378 but are likely outdated by now
 
-::These servers were found by ApateDNS on an offline w10 vm
+::These servers were found by ApateDNS on an offline w10 vm that I ran
 echo 0.0.0.0 ctldl.windowsupdate.com >> %SystemRoot%\System32\drivers\etc\hosts
 echo 0.0.0.0 slscr.update.microsoft.com >> %SystemRoot%\System32\drivers\etc\hosts
 
@@ -148,6 +154,10 @@ REM Here's another great anti-telemetry and anti-spyware script, written by alch
 REM Though its nearly half a decade old, It will help with legacy spyware implementations that microsoft hasnt hidden further within the OS since
 curl https://raw.githubusercontent.com/alchemy1/Win.10-SpyWare-Bloat-Telemetry-Remove/master/RemoveW10Bloat.bat.txt > C:\temp\remw10bloat.bat
 echo @ECHO OFF >> C:\temp\remw10bloat.bat
+
+::insert other changes here prior to the pointer reset 
+
+::Reset pointer to top of file and insert "@ECHO OFF" as this script doesnt have that
 type C:\temp\remw10bloat_COPY.bat >> C:\temp\remw10bloat.bat
 del C:\temp\remw10bloat_COPY.bat
 ren C:\temp\remw10bloat.bat C:\temp\remw10bloat_COPY.bat	
@@ -163,7 +173,7 @@ exit /b 0
 
 :two
 echo any domain or address placed here will be appended to the hosts file AS IS (unless blank or "main")
-set /P inp=Enter line to append to hosts file:
+set /P inp=Enter line to append to hosts file ("main" to exit this prompt):
 If /I "%inp%"=="" exit /b && goto two
 If /I "%inp%"=="main" exit /b && goto main
 echo %inp% >> %SystemRoot%\System32\drivers\etc\hosts
@@ -186,7 +196,8 @@ goto main
 exit /b 0
 
 :five
-REM you can do this in powershell with Clear-Content as well
+REM you can do this in powershell with Clear-Content as well.
+:: This is here as a very primitive "undo" mechanism
 ;echo if this fails, ensure that the file isnt being used by another process (notepad, etc)
 break>%SystemRoot%\System32\drivers\etc\hosts
 goto main
